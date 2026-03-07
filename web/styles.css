@@ -56,22 +56,22 @@ body {
   background: #e1bf92;
 }
 
-.github-row {
-  text-align: center;
-  background: #111;
-  padding: 0 8px 8px;
+.page-link-wrap {
+  width: min(1200px, 96vw);
+  margin: 6px auto 0;
+  text-align: left;
 }
 
-.github-link {
-  color: #6f6f6f;
+.page-link {
+  color: #707070;
   text-decoration: none;
-  font-size: 12px;
-  opacity: 0.8;
+  font-size: 14px;
+  opacity: 0.85;
 }
 
-.github-link:hover {
-  opacity: 1;
+.page-link:hover {
   color: #8a8a8a;
+  opacity: 1;
 }
 
 .game-row {
