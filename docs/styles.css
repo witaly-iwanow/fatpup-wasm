@@ -24,6 +24,7 @@ body {
   background: #000;
   color: #000;
   font-family: "LektonFatpup", "Courier New", monospace;
+  touch-action: manipulation;
 }
 
 .app-shell {
@@ -50,6 +51,7 @@ body {
   background: #d7ae7b;
   color: #111;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .controls-row button:hover {
@@ -98,6 +100,7 @@ body {
   place-items: center;
   cursor: pointer;
   box-shadow: none;
+  touch-action: manipulation;
 }
 
 .square.light {
