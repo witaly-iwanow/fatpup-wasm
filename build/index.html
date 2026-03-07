@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fatpup WASM</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="game-row">
+      <div id="board" class="board" aria-label="Chess board"></div>
+
+      <aside class="move-panel">
+        <pre id="move-history" class="moves-list"></pre>
+      </aside>
+    </section>
+
+    <section class="controls-row">
+      <button id="btn-back" type="button">Take back</button>
+      <button id="btn-flip" type="button">Flip sides</button>
+      <button id="btn-restart" type="button">Restart</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="fatpup_wasm.js"></script>
+</body>
+</html>
