@@ -9,13 +9,24 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(FetchContent)
+
+set(FATPUP_GIT_REPOSITORY "https://github.com/witaly-iwanow/fatpup.git" CACHE STRING "fatpup git repo")
+set(FATPUP_GIT_TAG "b2a2237f4274222ee5732c8d32625765da24dec9" CACHE STRING "fatpup git tag/commit")
+
+# fatpup controls these options in its own project; force them off here.
 set(BUILD_TESTS OFF CACHE BOOL "Build fatpup tests" FORCE)
 set(BUILD_UCI OFF CACHE BOOL "Build fatpup UCI binary" FORCE)
-add_subdirectory(third_party/fatpup)
+
+FetchContent_Declare(
+    fatpup
+    GIT_REPOSITORY ${FATPUP_GIT_REPOSITORY}
+    GIT_TAG ${FATPUP_GIT_TAG}
+)
+FetchContent_MakeAvailable(fatpup)
 
 add_executable(fatpup_wasm src/fatpup_wasm.cpp)
 target_link_libraries(fatpup_wasm PRIVATE fatpup)
-target_include_directories(fatpup_wasm PRIVATE third_party/fatpup/include)
 
 set_target_properties(fatpup_wasm PROPERTIES
     OUTPUT_NAME "fatpup_wasm"
