@@ -54,11 +54,31 @@
       return;
     }
 
+    normalizeTerminalState(parsed);
+
     const previousData = state.data;
     state.data = parsed;
     renderBoard();
     renderMovePanel();
     maybeShowGameOverToast(previousData, parsed);
+  }
+
+  function onlyKingsRemain(board) {
+    if (!board) {
+      return false;
+    }
+    const pieces = String(board).replace(/\./g, "");
+    return pieces.length === 2 && pieces.includes("K") && pieces.includes("k");
+  }
+
+  function normalizeTerminalState(data) {
+    if (!data || !onlyKingsRemain(data.board)) {
+      return;
+    }
+
+    data.gameOver = true;
+    data.status = "Draw.";
+    data.userToMove = false;
   }
 
   function displayToWhiteCoordinates(displayRow, displayCol) {
