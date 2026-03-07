@@ -28,6 +28,7 @@
     moveHistory: document.getElementById("move-history"),
     btnBack: document.getElementById("btn-back"),
     btnFlip: document.getElementById("btn-flip"),
+    btnLoadFen: document.getElementById("btn-load-fen"),
     btnRestart: document.getElementById("btn-restart")
   };
 
@@ -115,12 +116,43 @@
 
   function runCommand(command) {
     if (!state.ready) {
-      return;
+      return "";
     }
 
     state.selectedSquare = "";
-    state.fpCommand(command);
+    const result = String(state.fpCommand(command) || "");
     refreshState();
+    return result;
+  }
+
+  function applyFen(fen, onError) {
+    const trimmedFen = String(fen || "").trim();
+    if (!trimmedFen) {
+      if (onError) {
+        onError("FEN cannot be empty.");
+      }
+      return false;
+    }
+
+    const result = runCommand(`fen ${trimmedFen}`);
+    if (result.includes("Invalid FEN.")) {
+      if (onError) {
+        onError(result);
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  function loadFen() {
+    const currentFen = state.data ? String(state.data.fen || "") : "";
+    const input = window.prompt("Paste a FEN string.", currentFen);
+    if (input === null) {
+      return;
+    }
+
+    applyFen(input, (message) => window.alert(message));
   }
 
   function onSquareClick(displayRow, displayCol) {
@@ -282,6 +314,7 @@
   function wireControls() {
     dom.btnBack.addEventListener("click", () => runCommand("back"));
     dom.btnFlip.addEventListener("click", () => runCommand("flip"));
+    dom.btnLoadFen.addEventListener("click", loadFen);
     dom.btnRestart.addEventListener("click", () => runCommand("restart"));
   }
 
