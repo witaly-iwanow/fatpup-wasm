@@ -56,7 +56,8 @@
 
     const previousData = state.data;
     state.data = parsed;
-    renderAll();
+    renderBoard();
+    renderMovePanel();
     maybeShowGameOverToast(previousData, parsed);
   }
 
@@ -88,14 +89,12 @@
   }
 
   function pieceAtCoord(coord) {
-    if (!state.data || !state.data.board) {
+    const board = state.data && state.data.board;
+    if (!board) {
       return ".";
     }
     const idx = boardIndexFromCoord(coord);
-    if (idx < 0 || idx >= state.data.board.length) {
-      return ".";
-    }
-    return state.data.board[idx];
+    return idx >= 0 && idx < board.length ? board[idx] : ".";
   }
 
   function isUserPiece(pieceChar) {
@@ -302,6 +301,16 @@
 
     const formatMoveNumber = (moveNumber) => String(`${moveNumber}.`).padStart(3, " ");
     const formatMoveText = (moveText) => String(moveText || "").padEnd(MOVE_TEXT_WIDTH, " ");
+    const appendMoveLine = (lines, moveNumber, whiteMove, blackMove) => {
+      const parts = [formatMoveNumber(moveNumber)];
+      if (whiteMove) {
+        parts.push(formatMoveText(whiteMove));
+      }
+      if (blackMove) {
+        parts.push(formatMoveText(blackMove));
+      }
+      lines.push(parts.join(" "));
+    };
 
     const white = state.data.whiteMoves || [];
     const black = state.data.blackMoves || [];
@@ -312,30 +321,16 @@
     if (startWhiteTurn) {
       const rows = Math.max(white.length, black.length);
       for (let i = 0; i < rows; i += 1) {
-        const parts = [formatMoveNumber(startFullMoveNumber + i)];
-        if (white[i]) {
-          parts.push(formatMoveText(white[i]));
-        }
-        if (black[i]) {
-          parts.push(formatMoveText(black[i]));
-        }
-        lines.push(parts.join(" "));
+        appendMoveLine(lines, startFullMoveNumber + i, white[i], black[i]);
       }
     } else {
       if (black[0]) {
-        lines.push(`${formatMoveNumber(startFullMoveNumber)} ${formatMoveText("..")} ${formatMoveText(black[0])}`);
+        appendMoveLine(lines, startFullMoveNumber, "..", black[0]);
       }
 
       const rows = Math.max(white.length, Math.max(0, black.length - 1));
       for (let i = 0; i < rows; i += 1) {
-        const parts = [formatMoveNumber(startFullMoveNumber + 1 + i)];
-        if (white[i]) {
-          parts.push(formatMoveText(white[i]));
-        }
-        if (black[i + 1]) {
-          parts.push(formatMoveText(black[i + 1]));
-        }
-        lines.push(parts.join(" "));
+        appendMoveLine(lines, startFullMoveNumber + 1 + i, white[i], black[i + 1]);
       }
     }
 
@@ -348,11 +343,6 @@
     }
 
     dom.moveHistory.textContent = lines.join("\n");
-  }
-
-  function renderAll() {
-    renderBoard();
-    renderMovePanel();
   }
 
   function wireControls() {

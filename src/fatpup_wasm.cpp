@@ -182,6 +182,11 @@ bool IsGameOverState(fatpup::Position::State state)
     return state == fatpup::Position::State::Checkmate || state == fatpup::Position::State::Stalemate;
 }
 
+bool IsUserToMove(const AppState& app)
+{
+    return app.position.isWhiteTurn() == app.userPlaysWhite;
+}
+
 std::string StatusText(const fatpup::Position& position)
 {
     const fatpup::Position::State state = position.getState();
@@ -585,14 +590,26 @@ void CommitMove(AppState* app, fatpup::Move move)
     app->hasLastMove = true;
 }
 
+void ClearRenderedHistory(AppState* app)
+{
+    app->whiteMoves.clear();
+    app->blackMoves.clear();
+    app->hasLastMove = false;
+    app->lastMove.setEmpty();
+}
+
+void ClearRecordedGame(AppState* app)
+{
+    app->moveHistory.clear();
+    ClearRenderedHistory(app);
+}
+
 void RebuildFromHistory(AppState* app)
 {
     app->position = app->startPosition;
     app->halfMoveClock = app->startHalfMoveClock;
     app->fullMoveNumber = app->startFullMoveNumber;
-    app->whiteMoves.clear();
-    app->blackMoves.clear();
-    app->hasLastMove = false;
+    ClearRenderedHistory(app);
 
     for (const fatpup::Move move : app->moveHistory)
     {
@@ -614,17 +631,12 @@ void ResetGame(AppState* app, bool userPlaysWhite)
     app->position.setInitial();
     app->startPosition = app->position;
 
-    app->moveHistory.clear();
-    app->whiteMoves.clear();
-    app->blackMoves.clear();
-
     app->startHalfMoveClock = 0;
     app->startFullMoveNumber = 1;
     app->halfMoveClock = app->startHalfMoveClock;
     app->fullMoveNumber = app->startFullMoveNumber;
 
-    app->hasLastMove = false;
-    app->lastMove.setEmpty();
+    ClearRecordedGame(app);
 
     if (app->engine)
     {
@@ -636,7 +648,7 @@ std::string AdvanceEngineIfNeeded(AppState* app)
 {
     std::ostringstream out;
 
-    while (!IsGameOverState(app->position.getState()) && (app->position.isWhiteTurn() != app->userPlaysWhite))
+    while (!IsGameOverState(app->position.getState()) && !IsUserToMove(*app))
     {
         out << (app->position.isWhiteTurn() ? "White" : "Black") << " (engine) is thinking...\n";
 
@@ -865,11 +877,7 @@ std::string ExecuteCommand(const std::string& rawInput)
         g_app.position = newPosition;
         g_app.startPosition = g_app.position;
         g_app.userPlaysWhite = g_app.position.isWhiteTurn();
-        g_app.moveHistory.clear();
-        g_app.whiteMoves.clear();
-        g_app.blackMoves.clear();
-        g_app.hasLastMove = false;
-        g_app.lastMove.setEmpty();
+        ClearRecordedGame(&g_app);
 
         ParseFenCounters(fen, &g_app.startHalfMoveClock, &g_app.startFullMoveNumber);
         g_app.halfMoveClock = g_app.startHalfMoveClock;
@@ -888,8 +896,7 @@ std::string ExecuteCommand(const std::string& rawInput)
         return "Game is over. Use 'game [white|black]' or 'fen <string>'.";
     }
 
-    const bool userToMove = (g_app.position.isWhiteTurn() == g_app.userPlaysWhite);
-    if (!userToMove)
+    if (!IsUserToMove(g_app))
     {
         return "It's engine's turn.";
     }
@@ -924,7 +931,6 @@ std::string BuildStateJson()
     const std::string status = StatusText(g_app.position);
     const std::string board = BoardFlat64(g_app.position);
     const std::string fen = PositionToFen(g_app.position, g_app.halfMoveClock, g_app.fullMoveNumber);
-    const std::vector<fatpup::Move> legalMoves = g_app.position.possibleMoves();
 
     std::ostringstream out;
     out << "{";
@@ -934,7 +940,7 @@ std::string BuildStateJson()
     out << "\"gameOver\":" << (IsGameOverState(g_app.position.getState()) ? "true" : "false") << ",";
     out << "\"whiteTurn\":" << (g_app.position.isWhiteTurn() ? "true" : "false") << ",";
     out << "\"userPlaysWhite\":" << (g_app.userPlaysWhite ? "true" : "false") << ",";
-    out << "\"userToMove\":" << ((g_app.position.isWhiteTurn() == g_app.userPlaysWhite) ? "true" : "false") << ",";
+    out << "\"userToMove\":" << (IsUserToMove(g_app) ? "true" : "false") << ",";
     out << "\"startWhiteTurn\":" << (g_app.startPosition.isWhiteTurn() ? "true" : "false") << ",";
     out << "\"startFullMoveNumber\":" << std::max(1, g_app.startFullMoveNumber) << ",";
     out << "\"lastMove\":\"" << JsonEscape(g_app.hasLastMove ? MoveToUci(g_app.lastMove) : std::string()) << "\",";
@@ -958,17 +964,6 @@ std::string BuildStateJson()
             out << ",";
         }
         out << "\"" << JsonEscape(g_app.blackMoves[i]) << "\"";
-    }
-    out << "],";
-
-    out << "\"legalMoves\":[";
-    for (std::size_t i = 0; i < legalMoves.size(); ++i)
-    {
-        if (i)
-        {
-            out << ",";
-        }
-        out << "\"" << JsonEscape(g_app.position.moveToString(legalMoves[i])) << "\"";
     }
     out << "]";
 
