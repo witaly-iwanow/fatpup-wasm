@@ -182,6 +182,35 @@ bool IsGameOverState(fatpup::Position::State state)
     return state == fatpup::Position::State::Checkmate || state == fatpup::Position::State::Stalemate;
 }
 
+bool OnlyKingsRemain(const fatpup::Position& position)
+{
+    int kingCount = 0;
+
+    for (int row = 0; row < fatpup::BOARD_SIZE; ++row)
+    {
+        for (int col = 0; col < fatpup::BOARD_SIZE; ++col)
+        {
+            const unsigned char piece = position.square(row, col).piece();
+            if (piece == 0)
+            {
+                continue;
+            }
+            if (piece != fatpup::King)
+            {
+                return false;
+            }
+            ++kingCount;
+        }
+    }
+
+    return kingCount == 2;
+}
+
+bool IsGameOverPosition(const fatpup::Position& position)
+{
+    return IsGameOverState(position.getState()) || OnlyKingsRemain(position);
+}
+
 bool IsUserToMove(const AppState& app)
 {
     return app.position.isWhiteTurn() == app.userPlaysWhite;
@@ -189,6 +218,11 @@ bool IsUserToMove(const AppState& app)
 
 std::string StatusText(const fatpup::Position& position)
 {
+    if (OnlyKingsRemain(position))
+    {
+        return "Draw.";
+    }
+
     const fatpup::Position::State state = position.getState();
     if (state == fatpup::Position::State::Check)
     {
@@ -401,6 +435,11 @@ void ApplyMoveAndTrackCounters(fatpup::Position* position, fatpup::Move move, in
 
 std::string PgnResultToken(const fatpup::Position& position)
 {
+    if (OnlyKingsRemain(position))
+    {
+        return "1/2-1/2";
+    }
+
     const fatpup::Position::State state = position.getState();
     if (state == fatpup::Position::State::Checkmate)
     {
@@ -648,7 +687,7 @@ std::string AdvanceEngineIfNeeded(AppState* app)
 {
     std::ostringstream out;
 
-    while (!IsGameOverState(app->position.getState()) && !IsUserToMove(*app))
+    while (!IsGameOverPosition(app->position) && !IsUserToMove(*app))
     {
         out << (app->position.isWhiteTurn() ? "White" : "Black") << " (engine) is thinking...\n";
 
@@ -891,7 +930,7 @@ std::string ExecuteCommand(const std::string& rawInput)
         return out.str();
     }
 
-    if (IsGameOverState(g_app.position.getState()))
+    if (IsGameOverPosition(g_app.position))
     {
         return "Game is over. Use 'game [white|black]' or 'fen <string>'.";
     }
@@ -937,7 +976,7 @@ std::string BuildStateJson()
     out << "\"board\":\"" << JsonEscape(board) << "\",";
     out << "\"fen\":\"" << JsonEscape(fen) << "\",";
     out << "\"status\":\"" << JsonEscape(status) << "\",";
-    out << "\"gameOver\":" << (IsGameOverState(g_app.position.getState()) ? "true" : "false") << ",";
+    out << "\"gameOver\":" << (IsGameOverPosition(g_app.position) ? "true" : "false") << ",";
     out << "\"whiteTurn\":" << (g_app.position.isWhiteTurn() ? "true" : "false") << ",";
     out << "\"userPlaysWhite\":" << (g_app.userPlaysWhite ? "true" : "false") << ",";
     out << "\"userToMove\":" << (IsUserToMove(g_app) ? "true" : "false") << ",";
