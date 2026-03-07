@@ -864,6 +864,7 @@ std::string ExecuteCommand(const std::string& rawInput)
 
         g_app.position = newPosition;
         g_app.startPosition = g_app.position;
+        g_app.userPlaysWhite = g_app.position.isWhiteTurn();
         g_app.moveHistory.clear();
         g_app.whiteMoves.clear();
         g_app.blackMoves.clear();
