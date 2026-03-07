@@ -115,7 +115,7 @@ body {
 
 .game-row {
   display: grid;
-  grid-template-columns: 4fr 1fr;
+  grid-template-columns: 3.85fr 1.15fr;
   aspect-ratio: 5 / 4;
   overflow: hidden;
 }
@@ -175,14 +175,14 @@ body {
 
 .moves-list {
   margin: 0;
-  white-space: pre-wrap;
+  white-space: pre;
   font-size: 22px;
   font-weight: 700;
   line-height: 1.05;
   min-height: 0;
   height: 100%;
   width: 100%;
-  overflow-y: auto;
+  overflow: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }

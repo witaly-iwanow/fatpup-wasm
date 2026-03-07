@@ -13,6 +13,7 @@
     n: "assets/resources/BlackKnight.png",
     p: "assets/resources/BlackPawn.png"
   };
+  const MOVE_TEXT_WIDTH = "0-0-0+".length;
 
   const state = {
     ready: false,
@@ -299,6 +300,9 @@
       return;
     }
 
+    const formatMoveNumber = (moveNumber) => String(`${moveNumber}.`).padStart(3, " ");
+    const formatMoveText = (moveText) => String(moveText || "").padEnd(MOVE_TEXT_WIDTH, " ");
+
     const white = state.data.whiteMoves || [];
     const black = state.data.blackMoves || [];
     const lines = [];
@@ -308,28 +312,28 @@
     if (startWhiteTurn) {
       const rows = Math.max(white.length, black.length);
       for (let i = 0; i < rows; i += 1) {
-        const parts = [`${startFullMoveNumber + i}.`];
+        const parts = [formatMoveNumber(startFullMoveNumber + i)];
         if (white[i]) {
-          parts.push(white[i]);
+          parts.push(formatMoveText(white[i]));
         }
         if (black[i]) {
-          parts.push(black[i]);
+          parts.push(formatMoveText(black[i]));
         }
         lines.push(parts.join(" "));
       }
     } else {
       if (black[0]) {
-        lines.push(`${startFullMoveNumber}... ${black[0]}`);
+        lines.push(`${formatMoveNumber(startFullMoveNumber)} ${formatMoveText("..")} ${formatMoveText(black[0])}`);
       }
 
       const rows = Math.max(white.length, Math.max(0, black.length - 1));
       for (let i = 0; i < rows; i += 1) {
-        const parts = [`${startFullMoveNumber + 1 + i}.`];
+        const parts = [formatMoveNumber(startFullMoveNumber + 1 + i)];
         if (white[i]) {
-          parts.push(white[i]);
+          parts.push(formatMoveText(white[i]));
         }
         if (black[i + 1]) {
-          parts.push(black[i + 1]);
+          parts.push(formatMoveText(black[i + 1]));
         }
         lines.push(parts.join(" "));
       }
