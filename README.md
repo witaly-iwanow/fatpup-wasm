@@ -24,18 +24,9 @@ cd fatpup-wasm
 
 `fatpup` is fetched automatically via CMake `FetchContent` (pinned commit).
 
-## Build (macOS/Linux)
+## Build
 
-Install and activate Emscripten SDK first, then:
-
-```bash
-emcmake cmake -S . -B build
-cmake --build build -j
-```
-
-## Build (Windows)
-
-Use an Emscripten-enabled shell (`emsdk_env.bat`) and run:
+Install and activate Emscripten SDK first (on Windows use an Emscripten-enabled shell, e.g. `emsdk_env.bat`), then:
 
 ```bat
 emcmake cmake -S . -B build
@@ -52,3 +43,5 @@ python3 -m http.server 8080
 ```
 
 Open `http://localhost:8080`.
+
+![Screenshot](screenshots/game.png)
