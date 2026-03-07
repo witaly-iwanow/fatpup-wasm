@@ -13,7 +13,7 @@
     <img src="web/assets/resources/BlackPawn.png" width=40 />
 </p>
 
-Sample web UI for the fatpup chess engine based on Emscripten (`HTML + JS + WASM`).
+Sample web UI for the [fatpup](https://github.com/witaly-iwanow/fatpup) chess engine, written in C++ and compiled for the web with Emscripten (`HTML + JS + WASM`).
 
 ## Get the code
 
