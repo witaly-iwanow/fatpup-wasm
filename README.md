@@ -29,16 +29,16 @@ cd fatpup-wasm
 Install and activate Emscripten SDK first (on Windows use an Emscripten-enabled shell, e.g. `emsdk_env.bat`), then:
 
 ```bat
-emcmake cmake -S . -B build
-cmake --build build -j
+emcmake cmake -S . -B _build
+cmake --build _build -j
 ```
 
 ## Run
 
-Serve the output directory:
+Serve the GitHub Pages directory:
 
 ```bash
-cd build/web
+cd docs
 python3 -m http.server 8080
 ```
 
