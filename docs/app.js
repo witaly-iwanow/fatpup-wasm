@@ -18,6 +18,8 @@
     ready: false,
     data: null,
     selectedSquare: "",
+    gameOverToastTimer: null,
+    lastGameOverMessage: "",
     fpInit: null,
     fpCommand: null,
     fpGetState: null
@@ -25,6 +27,7 @@
 
   const dom = {
     board: document.getElementById("board"),
+    gameOverToast: document.getElementById("game-over-toast"),
     moveHistory: document.getElementById("move-history"),
     btnBack: document.getElementById("btn-back"),
     btnFlip: document.getElementById("btn-flip"),
@@ -50,8 +53,10 @@
       return;
     }
 
+    const previousData = state.data;
     state.data = parsed;
     renderAll();
+    maybeShowGameOverToast(previousData, parsed);
   }
 
   function displayToWhiteCoordinates(displayRow, displayCol) {
@@ -201,6 +206,41 @@
     }
 
     return "Draw";
+  }
+
+  function hideGameOverToast() {
+    if (state.gameOverToastTimer !== null) {
+      window.clearTimeout(state.gameOverToastTimer);
+      state.gameOverToastTimer = null;
+    }
+    dom.gameOverToast.classList.remove("visible");
+  }
+
+  function showGameOverToast(message) {
+    hideGameOverToast();
+    dom.gameOverToast.textContent = message;
+    dom.gameOverToast.classList.add("visible");
+    state.gameOverToastTimer = window.setTimeout(() => {
+      dom.gameOverToast.classList.remove("visible");
+      state.gameOverToastTimer = null;
+    }, 7800);
+  }
+
+  function maybeShowGameOverToast(previousData, nextData) {
+    const message = gameResultText(nextData);
+    if (!message) {
+      state.lastGameOverMessage = "";
+      hideGameOverToast();
+      return;
+    }
+
+    const previousMessage = gameResultText(previousData);
+    if (message === previousMessage && message === state.lastGameOverMessage) {
+      return;
+    }
+
+    state.lastGameOverMessage = message;
+    showGameOverToast(message);
   }
 
   function ensureBoardSkeleton() {

@@ -9,7 +9,10 @@
 <body>
   <main class="app-shell">
     <section class="game-row">
-      <div id="board" class="board" aria-label="Chess board"></div>
+      <div class="board-wrap">
+        <div id="game-over-toast" class="game-over-toast" aria-live="polite" aria-atomic="true"></div>
+        <div id="board" class="board" aria-label="Chess board"></div>
+      </div>
 
       <aside class="move-panel">
         <pre id="move-history" class="moves-list"></pre>

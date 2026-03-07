@@ -34,6 +34,37 @@ body {
   background: #000;
 }
 
+.board-wrap {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.game-over-toast {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, calc(-50% - 10px));
+  padding: 12px 18px;
+  border: 1px solid rgba(255, 232, 191, 0.45);
+  background: rgba(16, 16, 16, 0.58);
+  color: #fff4db;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+  z-index: 2;
+  backdrop-filter: blur(3px);
+}
+
+.game-over-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+}
+
 .controls-row {
   display: flex;
   flex-wrap: wrap;
