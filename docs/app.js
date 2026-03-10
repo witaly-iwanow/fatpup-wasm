@@ -14,13 +14,17 @@
     p: "assets/resources/BlackPawn.png"
   };
   const MOVE_TEXT_WIDTH = "0-0-0+".length;
+  const MOVE_ANIMATION_MS = 140;
+  const PIECE_SCALE = 0.92;
 
   const state = {
     ready: false,
     data: null,
     selectedSquare: "",
+    hiddenPieceCoord: "",
     gameOverToastTimer: null,
     lastGameOverMessage: "",
+    moveAnimation: null,
     fpInit: null,
     fpCommand: null,
     fpGetState: null
@@ -28,6 +32,7 @@
 
   const dom = {
     board: document.getElementById("board"),
+    boardWrap: document.querySelector(".board-wrap"),
     gameOverToast: document.getElementById("game-over-toast"),
     moveHistory: document.getElementById("move-history"),
     btnBack: document.getElementById("btn-back"),
@@ -57,9 +62,15 @@
     normalizeTerminalState(parsed);
 
     const previousData = state.data;
+    const animation = buildMoveAnimation(previousData, parsed);
+    cancelMoveAnimation();
     state.data = parsed;
+    state.hiddenPieceCoord = animation ? animation.toCoord : "";
     renderBoard();
     renderMovePanel();
+    if (animation) {
+      playMoveAnimation(animation);
+    }
     maybeShowGameOverToast(previousData, parsed);
   }
 
@@ -109,7 +120,10 @@
   }
 
   function pieceAtCoord(coord) {
-    const board = state.data && state.data.board;
+    return pieceAtCoordInBoard(state.data && state.data.board, coord);
+  }
+
+  function pieceAtCoordInBoard(board, coord) {
     if (!board) {
       return ".";
     }
@@ -282,6 +296,145 @@
     }
   }
 
+  function displayPositionForCoord(coord) {
+    if (!coord || coord.length !== 2) {
+      return null;
+    }
+
+    const whiteCol = coord.charCodeAt(0) - 97;
+    const rank = coord.charCodeAt(1) - 48;
+    if (whiteCol < 0 || whiteCol > 7 || rank < 1 || rank > 8) {
+      return null;
+    }
+
+    const whiteRow = 8 - rank;
+    if (!state.data || state.data.userPlaysWhite) {
+      return { row: whiteRow, col: whiteCol };
+    }
+    return { row: 7 - whiteRow, col: 7 - whiteCol };
+  }
+
+  function cellElementForCoord(coord) {
+    const display = displayPositionForCoord(coord);
+    if (!display) {
+      return null;
+    }
+    return dom.board.querySelector(`[data-row="${display.row}"][data-col="${display.col}"]`);
+  }
+
+  function buildMoveAnimation(previousData, nextData) {
+    if (!previousData || !nextData || previousData.board === nextData.board) {
+      return null;
+    }
+
+    const lastMove = String(nextData.lastMove || "");
+    if (lastMove.length < 4) {
+      return null;
+    }
+
+    const fromCoord = lastMove.slice(0, 2);
+    const toCoord = lastMove.slice(2, 4);
+    const previousBoard = String(previousData.board || "");
+    const nextBoard = String(nextData.board || "");
+    const fromPiece = pieceAtCoordInBoard(previousBoard, fromCoord);
+    const toPiece = pieceAtCoordInBoard(nextBoard, toCoord);
+
+    if (fromPiece === "." || toPiece === "." || pieceAtCoordInBoard(nextBoard, fromCoord) !== ".") {
+      return null;
+    }
+
+    const fromIsWhite = fromPiece === fromPiece.toUpperCase();
+    const toIsWhite = toPiece === toPiece.toUpperCase();
+    if (fromIsWhite !== toIsWhite) {
+      return null;
+    }
+
+    let diffCount = 0;
+    for (let i = 0; i < Math.min(previousBoard.length, nextBoard.length); i += 1) {
+      if (previousBoard[i] !== nextBoard[i]) {
+        diffCount += 1;
+      }
+    }
+
+    if (diffCount < 2 || diffCount > 8) {
+      return null;
+    }
+
+    return { fromCoord, toCoord, piece: toPiece };
+  }
+
+  function cancelMoveAnimation() {
+    if (!state.moveAnimation) {
+      return;
+    }
+
+    state.moveAnimation.player.cancel();
+    state.moveAnimation.overlay.remove();
+    state.moveAnimation = null;
+    state.hiddenPieceCoord = "";
+  }
+
+  function finishMoveAnimation(overlay) {
+    if (!state.moveAnimation || state.moveAnimation.overlay !== overlay) {
+      return;
+    }
+
+    overlay.remove();
+    state.moveAnimation = null;
+    state.hiddenPieceCoord = "";
+    renderBoard();
+  }
+
+  function playMoveAnimation(animation) {
+    const fromCell = cellElementForCoord(animation.fromCoord);
+    const toCell = cellElementForCoord(animation.toCoord);
+    const sprite = SPRITES[animation.piece];
+    if (!fromCell || !toCell || !sprite) {
+      state.hiddenPieceCoord = "";
+      renderBoard();
+      return;
+    }
+
+    const boardRect = dom.board.getBoundingClientRect();
+    const fromRect = fromCell.getBoundingClientRect();
+    const toRect = toCell.getBoundingClientRect();
+    const pieceWidth = fromRect.width * PIECE_SCALE;
+    const pieceHeight = fromRect.height * PIECE_SCALE;
+    const startLeft = fromRect.left - boardRect.left + ((fromRect.width - pieceWidth) / 2);
+    const startTop = fromRect.top - boardRect.top + ((fromRect.height - pieceHeight) / 2);
+    const deltaX = toRect.left - fromRect.left;
+    const deltaY = toRect.top - fromRect.top;
+
+    const overlay = document.createElement("img");
+    overlay.className = "moving-piece";
+    overlay.src = sprite;
+    overlay.alt = animation.piece;
+    overlay.style.left = `${startLeft}px`;
+    overlay.style.top = `${startTop}px`;
+    overlay.style.width = `${pieceWidth}px`;
+    overlay.style.height = `${pieceHeight}px`;
+    dom.boardWrap.appendChild(overlay);
+
+    const player = overlay.animate(
+      [
+        { transform: "translate(0, 0)" },
+        { transform: `translate(${deltaX}px, ${deltaY}px)` }
+      ],
+      {
+        duration: MOVE_ANIMATION_MS,
+        easing: "linear"
+      }
+    );
+
+    state.moveAnimation = { overlay, player };
+    player.onfinish = () => finishMoveAnimation(overlay);
+    player.oncancel = () => {
+      if (state.moveAnimation && state.moveAnimation.overlay === overlay) {
+        overlay.remove();
+      }
+    };
+  }
+
   function renderBoard() {
     if (!state.data) {
       return;
@@ -308,7 +461,7 @@
         cell.classList.add("last-move");
       }
 
-      cell.innerHTML = (piece && piece !== "." && SPRITES[piece])
+      cell.innerHTML = (coord !== state.hiddenPieceCoord && piece && piece !== "." && SPRITES[piece])
         ? `<img src="${SPRITES[piece]}" alt="${piece}">`
         : "";
     }

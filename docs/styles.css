@@ -121,6 +121,7 @@ body {
 }
 
 .board {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
@@ -162,6 +163,14 @@ body {
   object-fit: contain;
   pointer-events: none;
   user-select: none;
+}
+
+.moving-piece {
+  position: absolute;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
 }
 
 .move-panel {
