@@ -16,12 +16,20 @@
   const MOVE_TEXT_WIDTH = "0-0-0+".length;
   const MOVE_ANIMATION_MS = 140;
   const PIECE_SCALE = 0.92;
+  const PROMOTION_OPTIONS = [
+    { suffix: "q", label: "Queen", whitePiece: "Q", blackPiece: "q" },
+    { suffix: "r", label: "Rook", whitePiece: "R", blackPiece: "r" },
+    { suffix: "b", label: "Bishop", whitePiece: "B", blackPiece: "b" },
+    { suffix: "n", label: "Knight", whitePiece: "N", blackPiece: "n" }
+  ];
 
   const state = {
     ready: false,
     data: null,
     selectedSquare: "",
     hiddenPieceCoord: "",
+    promotionResolve: null,
+    promotionPiece: "",
     gameOverToastTimer: null,
     lastGameOverMessage: "",
     moveAnimation: null,
@@ -34,6 +42,10 @@
     board: document.getElementById("board"),
     boardWrap: document.querySelector(".board-wrap"),
     gameOverToast: document.getElementById("game-over-toast"),
+    promotionDialog: document.getElementById("promotion-dialog"),
+    promotionChoices: document.getElementById("promotion-choices"),
+    promotionTitle: document.getElementById("promotion-title"),
+    promotionCancel: document.getElementById("promotion-cancel"),
     moveHistory: document.getElementById("move-history"),
     btnBack: document.getElementById("btn-back"),
     btnFlip: document.getElementById("btn-flip"),
@@ -141,16 +153,63 @@
     return pieceIsWhite === sideToMoveWhite && sideToMoveWhite === userSideWhite;
   }
 
-  function maybePromotionSuffix(fromCoord, toCoord) {
-    const piece = pieceAtCoord(fromCoord);
+  function needsPromotion(piece, toCoord) {
     if (!piece || piece.toLowerCase() !== "p") {
-      return "";
+      return false;
     }
     const targetRank = toCoord[1];
     if ((piece === "P" && targetRank === "8") || (piece === "p" && targetRank === "1")) {
-      return "q";
+      return true;
     }
-    return "";
+    return false;
+  }
+
+  function closePromotionDialog(choice) {
+    const resolve = state.promotionResolve;
+    state.promotionResolve = null;
+    state.promotionPiece = "";
+    dom.promotionDialog.classList.remove("visible");
+    dom.promotionDialog.setAttribute("aria-hidden", "true");
+    dom.promotionChoices.innerHTML = "";
+    if (resolve) {
+      resolve(choice);
+    }
+  }
+
+  function openPromotionDialog(piece) {
+    if (!piece) {
+      return Promise.resolve("");
+    }
+
+    if (state.promotionResolve) {
+      closePromotionDialog("");
+    }
+
+    state.promotionPiece = piece;
+    dom.promotionTitle.textContent = "Choose a promotion piece";
+    dom.promotionChoices.innerHTML = "";
+
+    for (const option of PROMOTION_OPTIONS) {
+      const button = document.createElement("button");
+      const spritePiece = piece === "P" ? option.whitePiece : option.blackPiece;
+      button.type = "button";
+      button.className = "promotion-option";
+      button.dataset.suffix = option.suffix;
+      button.innerHTML = `<img src="${SPRITES[spritePiece]}" alt="${option.label}"><span>${option.label}</span>`;
+      button.addEventListener("click", () => closePromotionDialog(option.suffix));
+      dom.promotionChoices.appendChild(button);
+    }
+
+    dom.promotionDialog.classList.add("visible");
+    dom.promotionDialog.setAttribute("aria-hidden", "false");
+    const firstButton = dom.promotionChoices.querySelector("button");
+    if (firstButton) {
+      firstButton.focus();
+    }
+
+    return new Promise((resolve) => {
+      state.promotionResolve = resolve;
+    });
   }
 
   function runCommand(command) {
@@ -158,6 +217,9 @@
       return "";
     }
 
+    if (state.promotionResolve) {
+      closePromotionDialog("");
+    }
     state.selectedSquare = "";
     const result = String(state.fpCommand(command) || "");
     refreshState();
@@ -194,12 +256,12 @@
     applyFen(input, (message) => window.alert(message));
   }
 
-  function onSquareClick(displayRow, displayCol) {
+  async function onSquareClick(displayRow, displayCol) {
     if (!state.data) {
       return;
     }
 
-    if (state.data.gameOver || !state.data.userToMove) {
+    if (state.data.gameOver || !state.data.userToMove || state.promotionResolve) {
       return;
     }
 
@@ -221,7 +283,17 @@
       return;
     }
 
-    const move = `${state.selectedSquare}${coord}${maybePromotionSuffix(state.selectedSquare, coord)}`;
+    const fromCoord = state.selectedSquare;
+    const piece = pieceAtCoord(fromCoord);
+    let promotionSuffix = "";
+    if (needsPromotion(piece, coord)) {
+      promotionSuffix = await openPromotionDialog(piece);
+      if (!promotionSuffix) {
+        return;
+      }
+    }
+
+    const move = `${fromCoord}${coord}${promotionSuffix}`;
     state.selectedSquare = "";
     runCommand(move);
   }
@@ -523,6 +595,25 @@
     dom.btnFlip.addEventListener("click", () => runCommand("flip"));
     dom.btnLoadFen.addEventListener("click", loadFen);
     dom.btnRestart.addEventListener("click", () => runCommand("restart"));
+    dom.promotionCancel.addEventListener("click", () => {
+      state.selectedSquare = "";
+      renderBoard();
+      closePromotionDialog("");
+    });
+    dom.promotionDialog.addEventListener("click", (event) => {
+      if (event.target === dom.promotionDialog) {
+        state.selectedSquare = "";
+        renderBoard();
+        closePromotionDialog("");
+      }
+    });
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && state.promotionResolve) {
+        state.selectedSquare = "";
+        renderBoard();
+        closePromotionDialog("");
+      }
+    });
   }
 
   function boot() {

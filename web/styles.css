@@ -65,6 +65,82 @@ body {
   transform: translate(-50%, -50%);
 }
 
+.promotion-dialog {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.52);
+  z-index: 3;
+}
+
+.promotion-dialog.visible {
+  display: flex;
+}
+
+.promotion-card {
+  width: min(420px, 100%);
+  padding: 14px;
+  border: 1px solid rgba(255, 232, 191, 0.5);
+  background: rgba(20, 18, 16, 0.96);
+  color: #fff4db;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.promotion-title {
+  margin-bottom: 12px;
+  font-size: 20px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.promotion-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.promotion-option,
+.promotion-cancel {
+  font: inherit;
+  font-weight: 700;
+  border: 1px solid #333;
+  cursor: pointer;
+}
+
+.promotion-option {
+  display: grid;
+  gap: 6px;
+  place-items: center;
+  padding: 12px 8px 10px;
+  background: #d7ae7b;
+  color: #111;
+}
+
+.promotion-option img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.promotion-option:hover,
+.promotion-option:focus-visible,
+.promotion-cancel:hover,
+.promotion-cancel:focus-visible {
+  background: #e1bf92;
+}
+
+.promotion-cancel {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #c69b66;
+  color: #111;
+}
+
 .controls-row {
   display: flex;
   flex-wrap: wrap;
@@ -218,6 +294,11 @@ body {
   .moves-list {
     font-size: 18px;
     max-height: 38vh;
+  }
+
+  .promotion-option img {
+    width: 60px;
+    height: 60px;
   }
 }
 

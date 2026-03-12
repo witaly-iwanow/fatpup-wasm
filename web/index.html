@@ -11,6 +11,13 @@
     <section class="game-row">
       <div class="board-wrap">
         <div id="game-over-toast" class="game-over-toast" aria-live="polite" aria-atomic="true"></div>
+        <div id="promotion-dialog" class="promotion-dialog" aria-hidden="true">
+          <div class="promotion-card" role="dialog" aria-modal="true" aria-labelledby="promotion-title">
+            <div id="promotion-title" class="promotion-title">Choose a promotion piece</div>
+            <div id="promotion-choices" class="promotion-choices"></div>
+            <button id="promotion-cancel" class="promotion-cancel" type="button">Cancel</button>
+          </div>
+        </div>
         <div id="board" class="board" aria-label="Chess board"></div>
       </div>
 
