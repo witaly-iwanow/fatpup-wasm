@@ -30,8 +30,10 @@
       <button id="btn-back" type="button">Take back</button>
       <button id="btn-flip" type="button">Flip sides</button>
       <button id="btn-restart" type="button">Restart</button>
-      <button id="btn-load-fen" type="button">FEN</button>
+      <button id="btn-load-fen" type="button" title="Copy the current position as a FEN string and optionally load a new one">FEN</button>
+      <button id="btn-copy-pgn" type="button" title="Copy the game score in PGN format to the clipboard">PGN</button>
     </section>
+    <div id="copy-toast" class="copy-toast" aria-live="polite" aria-atomic="true"></div>
   </main>
   <div class="page-link-wrap">
     <a class="page-link" href="https://github.com/witaly-iwanow/fatpup-wasm" target="_blank" rel="noopener noreferrer">https://github.com/witaly-iwanow/fatpup-wasm</a>

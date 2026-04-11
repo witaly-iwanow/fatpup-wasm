@@ -32,6 +32,7 @@
     promotionPiece: "",
     gameOverToastTimer: null,
     lastGameOverMessage: "",
+    copyToastTimer: null,
     moveAnimation: null,
     fpInit: null,
     fpCommand: null,
@@ -50,7 +51,9 @@
     btnBack: document.getElementById("btn-back"),
     btnFlip: document.getElementById("btn-flip"),
     btnLoadFen: document.getElementById("btn-load-fen"),
-    btnRestart: document.getElementById("btn-restart")
+    btnCopyPgn: document.getElementById("btn-copy-pgn"),
+    btnRestart: document.getElementById("btn-restart"),
+    copyToast: document.getElementById("copy-toast")
   };
 
   function refreshState() {
@@ -246,9 +249,70 @@
     return true;
   }
 
-  function loadFen() {
+  function showCopyToast(message) {
+    if (state.copyToastTimer !== null) {
+      window.clearTimeout(state.copyToastTimer);
+      state.copyToastTimer = null;
+    }
+    dom.copyToast.textContent = message;
+    dom.copyToast.classList.add("visible");
+    state.copyToastTimer = window.setTimeout(() => {
+      dom.copyToast.classList.remove("visible");
+      state.copyToastTimer = null;
+    }, 2000);
+  }
+
+  function fallbackCopyText(text) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-1000px";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    let succeeded = false;
+    try {
+      succeeded = document.execCommand("copy");
+    } catch (error) {
+      succeeded = false;
+    }
+    document.body.removeChild(textarea);
+    return succeeded;
+  }
+
+  async function copyTextToClipboard(text) {
+    if (!text) {
+      return false;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (error) {
+        // fall through to fallback
+      }
+    }
+
+    return fallbackCopyText(text);
+  }
+
+  async function copyPgn() {
+    if (!state.ready) {
+      return;
+    }
+
+    const pgn = String(state.fpCommand("score") || "");
+    if (await copyTextToClipboard(pgn)) {
+      showCopyToast("Game score copied");
+    }
+  }
+
+  async function loadFen() {
     const currentFen = state.data ? String(state.data.fen || "") : "";
-    const input = window.prompt("Paste a FEN string.", currentFen);
+    await copyTextToClipboard(currentFen);
+    const input = window.prompt("Current FEN copied. Paste FEN if you want to set new position.", currentFen);
     if (input === null) {
       return;
     }
@@ -594,6 +658,7 @@
     dom.btnBack.addEventListener("click", () => runCommand("back"));
     dom.btnFlip.addEventListener("click", () => runCommand("flip"));
     dom.btnLoadFen.addEventListener("click", loadFen);
+    dom.btnCopyPgn.addEventListener("click", copyPgn);
     dom.btnRestart.addEventListener("click", () => runCommand("restart"));
     dom.promotionCancel.addEventListener("click", () => {
       state.selectedSquare = "";
