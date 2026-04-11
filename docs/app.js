@@ -50,7 +50,8 @@
     moveHistory: document.getElementById("move-history"),
     btnBack: document.getElementById("btn-back"),
     btnFlip: document.getElementById("btn-flip"),
-    btnLoadFen: document.getElementById("btn-load-fen"),
+    btnCopyFen: document.getElementById("btn-copy-fen"),
+    btnSetFen: document.getElementById("btn-set-fen"),
     btnCopyPgn: document.getElementById("btn-copy-pgn"),
     btnRestart: document.getElementById("btn-restart"),
     btnEngine: document.getElementById("btn-engine"),
@@ -321,14 +322,22 @@
     }
   }
 
-  async function loadFen() {
+  async function copyFen() {
     const currentFen = state.data ? String(state.data.fen || "") : "";
-    await copyTextToClipboard(currentFen);
-    const input = window.prompt("Current FEN copied. Paste FEN if you want to set new position.", currentFen);
+    if (!currentFen) {
+      return;
+    }
+    if (await copyTextToClipboard(currentFen)) {
+      showCopyToast("FEN copied");
+    }
+  }
+
+  function setFen() {
+    const currentFen = state.data ? String(state.data.fen || "") : "";
+    const input = window.prompt("Paste a FEN string to set the position.", currentFen);
     if (input === null) {
       return;
     }
-
     applyFen(input, (message) => window.alert(message));
   }
 
@@ -669,7 +678,8 @@
   function wireControls() {
     dom.btnBack.addEventListener("click", () => runCommand("back"));
     dom.btnFlip.addEventListener("click", () => runCommand("flip"));
-    dom.btnLoadFen.addEventListener("click", loadFen);
+    dom.btnCopyFen.addEventListener("click", copyFen);
+    dom.btnSetFen.addEventListener("click", setFen);
     dom.btnCopyPgn.addEventListener("click", copyPgn);
     dom.btnRestart.addEventListener("click", () => runCommand("restart"));
     dom.btnEngine.addEventListener("click", () => {

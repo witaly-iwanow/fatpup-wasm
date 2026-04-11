@@ -162,7 +162,8 @@ body {
   touch-action: manipulation;
 }
 
-#btn-load-fen,
+#btn-copy-fen,
+#btn-set-fen,
 #btn-copy-pgn,
 #btn-engine {
   flex: 0 0 auto;
@@ -179,14 +180,13 @@ body {
 
 #btn-engine .brain {
   display: inline-block;
-  filter: grayscale(1) brightness(2.2);
-  opacity: 0.55;
-  transition: filter 120ms ease, opacity 120ms ease;
+  filter: brightness(0);
+  opacity: 0.25;
+  transition: opacity 120ms ease;
 }
 
 #btn-engine.weak .brain.b1,
 #btn-engine.strong .brain {
-  filter: none;
   opacity: 1;
 }
 
