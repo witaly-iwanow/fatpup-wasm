@@ -163,9 +163,31 @@ body {
 }
 
 #btn-load-fen,
-#btn-copy-pgn {
+#btn-copy-pgn,
+#btn-engine {
   flex: 0 0 auto;
   padding-inline: 12px;
+}
+
+#btn-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+#btn-engine .brain {
+  display: inline-block;
+  filter: grayscale(1) brightness(2.2);
+  opacity: 0.55;
+  transition: filter 120ms ease, opacity 120ms ease;
+}
+
+#btn-engine.weak .brain.b1,
+#btn-engine.strong .brain {
+  filter: none;
+  opacity: 1;
 }
 
 .copy-toast {

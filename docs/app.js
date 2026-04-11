@@ -53,8 +53,19 @@
     btnLoadFen: document.getElementById("btn-load-fen"),
     btnCopyPgn: document.getElementById("btn-copy-pgn"),
     btnRestart: document.getElementById("btn-restart"),
+    btnEngine: document.getElementById("btn-engine"),
     copyToast: document.getElementById("copy-toast")
   };
+
+  function renderEngineButton() {
+    if (!dom.btnEngine) {
+      return;
+    }
+    const mode = state.data && state.data.engineMode === "strong" ? "strong" : "weak";
+    dom.btnEngine.classList.toggle("weak", mode === "weak");
+    dom.btnEngine.classList.toggle("strong", mode === "strong");
+    dom.btnEngine.title = mode === "strong" ? "Strong engine (click for Weak)" : "Weak engine (click for Strong)";
+  }
 
   function refreshState() {
     if (!state.ready) {
@@ -83,6 +94,7 @@
     state.hiddenPieceCoord = animation ? animation.toCoord : "";
     renderBoard();
     renderMovePanel();
+    renderEngineButton();
     if (animation) {
       playMoveAnimation(animation);
     }
@@ -660,6 +672,10 @@
     dom.btnLoadFen.addEventListener("click", loadFen);
     dom.btnCopyPgn.addEventListener("click", copyPgn);
     dom.btnRestart.addEventListener("click", () => runCommand("restart"));
+    dom.btnEngine.addEventListener("click", () => {
+      const current = state.data && state.data.engineMode === "strong" ? "strong" : "weak";
+      runCommand(current === "strong" ? "engine weak" : "engine strong");
+    });
     dom.promotionCancel.addEventListener("click", () => {
       state.selectedSquare = "";
       renderBoard();
