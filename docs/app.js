@@ -684,7 +684,9 @@
     dom.btnRestart.addEventListener("click", () => runCommand("restart"));
     dom.btnEngine.addEventListener("click", () => {
       const current = state.data && state.data.engineMode === "strong" ? "strong" : "weak";
-      runCommand(current === "strong" ? "engine weak" : "engine strong");
+      const next = current === "strong" ? "weak" : "strong";
+      localStorage.setItem("engineMode", next);
+      runCommand(`engine ${next}`);
     });
     dom.promotionCancel.addEventListener("click", () => {
       state.selectedSquare = "";
@@ -717,6 +719,9 @@
     wireControls();
 
     state.fpInit();
+
+    const savedEngine = localStorage.getItem("engineMode") || "strong";
+    runCommand(`engine ${savedEngine}`);
 
     refreshState();
   }
