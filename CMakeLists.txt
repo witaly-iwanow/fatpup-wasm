@@ -42,4 +42,6 @@ target_link_options(fatpup_wasm PRIVATE
     "-sENVIRONMENT=web"
     "-sEXPORTED_FUNCTIONS=['_malloc','_free','_fp_init','_fp_command','_fp_get_state_json']"
     "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+    "--embed-file"
+    "${CMAKE_SOURCE_DIR}/tools/opening_book.txt@/opening_book.txt"
 )
