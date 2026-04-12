@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <ctime>
-#include <memory>
 #include <random>
 #include <sstream>
 #include <string>
@@ -11,7 +10,6 @@
 
 #include <emscripten/emscripten.h>
 
-#include "fatpup/engine.h"
 #include "fatpup/move.h"
 #include "fatpup/position.h"
 #include "fatpup/square.h"
@@ -22,7 +20,7 @@
 namespace
 {
 
-enum class EngineMode { Weak, Strong };
+enum class EngineMode { Weak, Medium, Strong };
 
 struct AppState
 {
@@ -30,8 +28,8 @@ struct AppState
     fatpup::Position startPosition;
 
     bool userPlaysWhite = true;
-    EngineMode engineMode = EngineMode::Weak;
-    std::unique_ptr<fatpup::Engine> weakEngine;
+    EngineMode engineMode = EngineMode::Medium;
+    search::SearchLimits searchLimits = search::SearchLimits::Medium();
 
     std::vector<fatpup::Move> moveHistory;
     std::vector<std::string> whiteMoves;
@@ -568,7 +566,7 @@ std::string HelpText()
         + "  restart        restart game with current side\n"
         + "  getfen         print current position as FEN\n"
         + "  game [white|black]  start a new game and choose your side\n"
-        + "  engine [weak|strong]  switch engine (default weak)\n"
+        + "  engine [weak|medium|strong]  switch engine (default medium)\n"
         + "  fen <string>   set position from FEN\n"
         + "  help           show commands\n"
         + "  quit           no-op in web app\n";
@@ -752,22 +750,7 @@ fatpup::Move PickEngineMove(AppState* app)
         return bookMove;
     }
 
-    if (app->engineMode == EngineMode::Strong)
-    {
-        return search::FindBestMove(app->position);
-    }
-
-    if (!app->weakEngine)
-    {
-        app->weakEngine.reset(fatpup::Engine::Create("minimax"));
-    }
-    if (!app->weakEngine)
-    {
-        return fatpup::Move();
-    }
-
-    app->weakEngine->SetPosition(app->position);
-    return app->weakEngine->GetBestMove();
+    return search::FindBestMove(app->position, app->searchLimits);
 }
 
 std::string AdvanceEngineIfNeeded(AppState* app)
@@ -959,18 +942,26 @@ std::string ExecuteCommand(const std::string& rawInput)
         if (mode == "weak")
         {
             g_app.engineMode = EngineMode::Weak;
+            g_app.searchLimits = search::SearchLimits::Weak();
+        }
+        else if (mode == "medium")
+        {
+            g_app.engineMode = EngineMode::Medium;
+            g_app.searchLimits = search::SearchLimits::Medium();
         }
         else if (mode == "strong")
         {
             g_app.engineMode = EngineMode::Strong;
+            g_app.searchLimits = search::SearchLimits::Strong();
         }
         else if (!mode.empty())
-        {
-            return "Usage: engine [weak|strong]";
-        }
+            return "Usage: engine [weak|medium|strong]";
 
         std::ostringstream out;
-        out << "Engine: " << (g_app.engineMode == EngineMode::Weak ? "Weak" : "Strong") << ".\n";
+        const char* label = "Medium";
+        if (g_app.engineMode == EngineMode::Weak) label = "Weak";
+        else if (g_app.engineMode == EngineMode::Strong) label = "Strong";
+        out << "Engine: " << label << ".\n";
         out << AdvanceEngineIfNeeded(&g_app);
         return out.str();
     }
@@ -1085,7 +1076,10 @@ std::string BuildStateJson()
     out << "\"whiteTurn\":" << (g_app.position.isWhiteTurn() ? "true" : "false") << ",";
     out << "\"userPlaysWhite\":" << (g_app.userPlaysWhite ? "true" : "false") << ",";
     out << "\"userToMove\":" << (IsUserToMove(g_app) ? "true" : "false") << ",";
-    out << "\"engineMode\":\"" << (g_app.engineMode == EngineMode::Weak ? "weak" : "strong") << "\",";
+    const char* engineModeStr = "medium";
+    if (g_app.engineMode == EngineMode::Weak) engineModeStr = "weak";
+    else if (g_app.engineMode == EngineMode::Strong) engineModeStr = "strong";
+    out << "\"engineMode\":\"" << engineModeStr << "\",";
     out << "\"startWhiteTurn\":" << (g_app.startPosition.isWhiteTurn() ? "true" : "false") << ",";
     out << "\"startFullMoveNumber\":" << std::max(1, g_app.startFullMoveNumber) << ",";
     out << "\"lastMove\":\"" << JsonEscape(g_app.hasLastMove ? MoveToUci(g_app.lastMove) : std::string()) << "\",";

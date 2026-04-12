@@ -62,10 +62,12 @@
     if (!dom.btnEngine) {
       return;
     }
-    const mode = state.data && state.data.engineMode === "strong" ? "strong" : "weak";
+    const mode = (state.data && state.data.engineMode) || "medium";
     dom.btnEngine.classList.toggle("weak", mode === "weak");
+    dom.btnEngine.classList.toggle("medium", mode === "medium");
     dom.btnEngine.classList.toggle("strong", mode === "strong");
-    dom.btnEngine.title = mode === "strong" ? "Strong engine (click for Weak)" : "Weak engine (click for Strong)";
+    const labels = { weak: "Weak", medium: "Medium", strong: "Strong" };
+    dom.btnEngine.title = `${labels[mode]} engine (click to cycle)`;
   }
 
   function refreshState() {
@@ -686,8 +688,9 @@
     dom.btnCopyPgn.addEventListener("click", copyPgn);
     dom.btnRestart.addEventListener("click", () => runCommand("restart"));
     dom.btnEngine.addEventListener("click", () => {
-      const current = state.data && state.data.engineMode === "strong" ? "strong" : "weak";
-      const next = current === "strong" ? "weak" : "strong";
+      const current = (state.data && state.data.engineMode) || "medium";
+      const cycle = { weak: "medium", medium: "strong", strong: "weak" };
+      const next = cycle[current] || "medium";
       localStorage.setItem("engineMode", next);
       runCommand(`engine ${next}`);
     });
@@ -723,7 +726,7 @@
 
     state.fpInit();
 
-    const savedEngine = localStorage.getItem("engineMode") || "strong";
+    const savedEngine = localStorage.getItem("engineMode") || "medium";
     runCommand(`engine ${savedEngine}`);
 
     refreshState();

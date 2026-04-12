@@ -149,7 +149,7 @@ fatpup::Move TryBookMove(const Book& book, const std::string& historyUci, const 
 
 fatpup::Move PickStrongMove(const fatpup::Position& pos)
 {
-    return search::FindBestMove(pos);
+    return search::FindBestMove(pos, search::SearchLimits::Medium());
 }
 
 fatpup::Move PickWeakMove(fatpup::Engine* weakEngine, const fatpup::Position& pos)

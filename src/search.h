@@ -15,6 +15,20 @@ constexpr int InfScore = 1000000;
 constexpr int MateScore = 100000;
 constexpr int NumSquares = fatpup::BOARD_SIZE * fatpup::BOARD_SIZE;
 
+// ply thresholds for move filtering during search
+struct SearchLimits
+{
+    SearchLimits() = delete;
+
+    int allMoves;        // plies 1..allMoves: consider all moves
+    int checksCapture;   // plies allMoves+1..checksCapture: all if <=8, else checks+captures
+    // beyond checksCapture: captures only (quiescence)
+
+    static SearchLimits Weak()   { return {2, 2}; }
+    static SearchLimits Medium() { return {2, 4}; }
+    static SearchLimits Strong() { return {3, 5}; }
+};
+
 inline int PieceMaterial(unsigned char piece)
 {
     switch (piece & fatpup::PieceMask)
@@ -141,18 +155,12 @@ inline bool GivesCheck(const fatpup::Position& pos, fatpup::Move move)
 
 enum FilterMode { AllMoves, ChecksAndCaptures, CapturesOnly };
 
-// Ply 1 (root, ours): all moves.
-// Ply 2 (opponent): all moves.
-// Ply 3 (ours) and 4 (opponent): all moves if 8 or fewer, else checks+captures.
-// Ply 5+: captures only (quiescence).
-inline FilterMode FilterForPly(int ply, std::size_t allMoveCount)
+inline FilterMode FilterForPly(const SearchLimits& limits, int ply, std::size_t allMoveCount)
 {
-    if (ply <= 2)
+    if (ply <= limits.allMoves)
         return AllMoves;
-
-    if (ply <= 4)
+    if (ply <= limits.checksCapture)
         return (allMoveCount > 8) ? ChecksAndCaptures : AllMoves;
-
     return CapturesOnly;
 }
 
@@ -186,7 +194,7 @@ inline void OrderMoves(const fatpup::Position& pos, const std::vector<fatpup::Mo
     }
 }
 
-inline int Search(const fatpup::Position& pos, int ply, int alpha, int beta)
+inline int Search(const fatpup::Position& pos, const SearchLimits& limits, int ply, int alpha, int beta)
 {
     const std::vector<fatpup::Move> moves = pos.possibleMoves();
     const bool maximizing = pos.isWhiteTurn();
@@ -200,7 +208,7 @@ inline int Search(const fatpup::Position& pos, int ply, int alpha, int beta)
         return 0;
     }
 
-    const FilterMode mode = FilterForPly(ply, moves.size());
+    const FilterMode mode = FilterForPly(limits, ply, moves.size());
 
     // Quiescence-style stand-pat: when we restrict to a tactical subset
     // (captures + checks at ply 3-4, captures-only at ply 5+), the side
@@ -241,7 +249,7 @@ inline int Search(const fatpup::Position& pos, int ply, int alpha, int beta)
     {
         fatpup::Position next = pos;
         next.moveDone(m);
-        const int eval = Search(next, ply + 1, alpha, beta);
+        const int eval = Search(next, limits, ply + 1, alpha, beta);
 
         if (maximizing)
         {
@@ -267,7 +275,7 @@ inline int Search(const fatpup::Position& pos, int ply, int alpha, int beta)
     return best;
 }
 
-inline fatpup::Move FindBestMove(const fatpup::Position& pos)
+inline fatpup::Move FindBestMove(const fatpup::Position& pos, const SearchLimits& limits)
 {
     const std::vector<fatpup::Move> moves = pos.possibleMoves();
     if (moves.empty())
@@ -287,7 +295,7 @@ inline fatpup::Move FindBestMove(const fatpup::Position& pos)
     {
         fatpup::Position next = pos;
         next.moveDone(m);
-        const int eval = Search(next, 2, alpha, beta);
+        const int eval = Search(next, limits, 2, alpha, beta);
 
         if (maximizing)
         {

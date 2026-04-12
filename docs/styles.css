@@ -186,6 +186,8 @@ body {
 }
 
 #btn-engine.weak .brain.b1,
+#btn-engine.medium .brain.b1,
+#btn-engine.medium .brain.b2,
 #btn-engine.strong .brain {
   opacity: 1;
 }
