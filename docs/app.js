@@ -237,7 +237,10 @@
       closePromotionDialog("");
     }
     state.selectedSquare = "";
+    const t0 = performance.now();
     const result = String(state.fpCommand(command) || "");
+    const ms = performance.now() - t0;
+    console.log(`command "${command}" took ${ms.toFixed(1)} ms`);
     refreshState();
     return result;
   }
