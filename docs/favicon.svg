@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- head -->
+  <circle cx="32" cy="30" r="18" fill="#b5651d"/>
+  <!-- left ear -->
+  <ellipse cx="16" cy="14" rx="8" ry="12" fill="#8B4513" transform="rotate(-15 16 14)"/>
+  <!-- right ear -->
+  <ellipse cx="48" cy="14" rx="8" ry="12" fill="#8B4513" transform="rotate(15 48 14)"/>
+  <!-- left eye -->
+  <circle cx="25" cy="26" r="3" fill="#1a1a1a"/>
+  <!-- right eye -->
+  <circle cx="39" cy="26" r="3" fill="#1a1a1a"/>
+  <!-- snout -->
+  <ellipse cx="32" cy="37" rx="10" ry="7" fill="#deb887"/>
+  <!-- nose -->
+  <ellipse cx="32" cy="34" rx="4" ry="3" fill="#1a1a1a"/>
+  <!-- tongue -->
+  <ellipse cx="32" cy="43" rx="3" ry="4" fill="#e75480"/>
+</svg>
