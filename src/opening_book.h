@@ -55,7 +55,8 @@ public:
 
     std::size_t size() const { return lines_.size(); }
 
-    // Pick a uniformly random next-ply UCI (4 chars) that extends `historyUci`.
+    // Pick a random next-ply UCI (4 chars) that extends `historyUci`.
+    // Probability is proportional to the number of book lines containing each move.
     // Returns an empty string when we're out of book.
     std::string sampleNext(const std::string& historyUci, std::mt19937* rng) const
     {
@@ -78,8 +79,6 @@ public:
         {
             return std::string();
         }
-        std::sort(nexts.begin(), nexts.end());
-        nexts.erase(std::unique(nexts.begin(), nexts.end()), nexts.end());
         std::uniform_int_distribution<std::size_t> pick(0, nexts.size() - 1);
         return nexts[pick(*rng)];
     }
