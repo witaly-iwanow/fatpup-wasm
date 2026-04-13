@@ -1,13 +1,12 @@
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
-#include <memory>
 #include <random>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "fatpup/engine.h"
 #include "fatpup/move.h"
 #include "fatpup/position.h"
 
@@ -23,16 +22,17 @@ constexpr unsigned RngSeed = 0xC0FFEE;
 constexpr int UciMoveLen = 4;
 constexpr int BookLineLen = BookPlyDepth * UciMoveLen;
 
-enum class Player { Strong, Weak };
+enum class Player { A, B };
 
-const char* PlayerName(Player p)
+struct PlayerInfo
 {
-    return p == Player::Strong ? "Strong" : "Weak";
-}
+    const char* name;
+    search::SearchLimits limits;
+};
 
 struct GameOutcome
 {
-    enum class Kind { StrongWin, WeakWin, Draw };
+    enum class Kind { AWin, BWin, Draw };
     Kind kind;
     int plies;
     const char* reason;
@@ -105,8 +105,6 @@ public:
 
     std::size_t size() const { return lines_.size(); }
 
-    // Given the move history (concatenated UCI), return a random next-ply UCI string,
-    // or empty if we're out of book.
     std::string sampleNext(const std::string& historyUci, std::mt19937* rng) const
     {
         if (historyUci.size() >= static_cast<std::size_t>(BookLineLen))
@@ -147,17 +145,6 @@ fatpup::Move TryBookMove(const Book& book, const std::string& historyUci, const 
     return FindMoveByUci(pos, bookUci);
 }
 
-fatpup::Move PickStrongMove(const fatpup::Position& pos)
-{
-    return search::FindBestMove(pos, search::SearchLimits::Medium());
-}
-
-fatpup::Move PickWeakMove(fatpup::Engine* weakEngine, const fatpup::Position& pos)
-{
-    weakEngine->SetPosition(pos);
-    return weakEngine->GetBestMove();
-}
-
 bool OnlyKingsRemain(const fatpup::Position& pos)
 {
     int kings = 0;
@@ -180,7 +167,7 @@ bool OnlyKingsRemain(const fatpup::Position& pos)
     return kings == 2;
 }
 
-GameResult PlayGame(Player whitePlayer, fatpup::Engine* weakEngine, const Book& book, std::mt19937* rng)
+GameResult PlayGame(Player whitePlayer, const PlayerInfo& playerA, const PlayerInfo& playerB, const Book& book, std::mt19937* rng)
 {
     fatpup::Position pos;
     pos.setInitial();
@@ -193,9 +180,9 @@ GameResult PlayGame(Player whitePlayer, fatpup::Engine* weakEngine, const Book& 
 
     while (plies < maxPlies)
     {
-        const Player toMove = pos.isWhiteTurn() == (whitePlayer == Player::Strong)
-            ? Player::Strong
-            : Player::Weak;
+        const Player toMove = pos.isWhiteTurn() == (whitePlayer == Player::A)
+            ? Player::A
+            : Player::B;
 
         const std::vector<fatpup::Move> moves = pos.possibleMoves();
         if (moves.empty())
@@ -203,8 +190,8 @@ GameResult PlayGame(Player whitePlayer, fatpup::Engine* weakEngine, const Book& 
             const fatpup::Position::State s = pos.getState();
             if (s == fatpup::Position::State::Checkmate)
             {
-                const Player winner = (toMove == Player::Strong) ? Player::Weak : Player::Strong;
-                gr.outcome = { winner == Player::Strong ? GameOutcome::Kind::StrongWin : GameOutcome::Kind::WeakWin, plies, "checkmate" };
+                const Player winner = (toMove == Player::A) ? Player::B : Player::A;
+                gr.outcome = { winner == Player::A ? GameOutcome::Kind::AWin : GameOutcome::Kind::BWin, plies, "checkmate" };
                 return gr;
             }
             gr.outcome = { GameOutcome::Kind::Draw, plies, "stalemate" };
@@ -220,14 +207,8 @@ GameResult PlayGame(Player whitePlayer, fatpup::Engine* weakEngine, const Book& 
         fatpup::Move move = TryBookMove(book, historyUci, pos, rng);
         if (move.isEmpty())
         {
-            if (toMove == Player::Strong)
-            {
-                move = PickStrongMove(pos);
-            }
-            else
-            {
-                move = PickWeakMove(weakEngine, pos);
-            }
+            const search::SearchLimits& limits = (toMove == Player::A) ? playerA.limits : playerB.limits;
+            move = search::FindBestMove(pos, limits);
         }
 
         if (move.isEmpty())
@@ -251,22 +232,22 @@ GameResult PlayGame(Player whitePlayer, fatpup::Engine* weakEngine, const Book& 
 
 std::string ResultToken(const GameOutcome& outcome, Player whitePlayer)
 {
-    if (outcome.kind == GameOutcome::Kind::StrongWin)
+    if (outcome.kind == GameOutcome::Kind::AWin)
     {
-        return (whitePlayer == Player::Strong) ? "1-0" : "0-1";
+        return (whitePlayer == Player::A) ? "1-0" : "0-1";
     }
-    if (outcome.kind == GameOutcome::Kind::WeakWin)
+    if (outcome.kind == GameOutcome::Kind::BWin)
     {
-        return (whitePlayer == Player::Weak) ? "1-0" : "0-1";
+        return (whitePlayer == Player::B) ? "1-0" : "0-1";
     }
     return "1/2-1/2";
 }
 
-std::string BuildPgn(int round, Player whitePlayer, const GameResult& gr)
+std::string BuildPgn(int round, Player whitePlayer, const PlayerInfo& playerA, const PlayerInfo& playerB, const GameResult& gr)
 {
     const std::string result = ResultToken(gr.outcome, whitePlayer);
-    const char* white = (whitePlayer == Player::Strong) ? "Strong" : "Weak";
-    const char* black = (whitePlayer == Player::Strong) ? "Weak" : "Strong";
+    const char* white = (whitePlayer == Player::A) ? playerA.name : playerB.name;
+    const char* black = (whitePlayer == Player::A) ? playerB.name : playerA.name;
 
     std::ostringstream out;
     out << "[Event \"Engine match\"]\n";
@@ -305,14 +286,44 @@ std::string BuildPgn(int round, Player whitePlayer, const GameResult& gr)
     return out.str();
 }
 
+bool ParseStrength(const char* arg, PlayerInfo* info)
+{
+    if (std::strcmp(arg, "weak") == 0)
+    {
+        info->name = "Weak";
+        info->limits = search::SearchLimits::Weak();
+        return true;
+    }
+    if (std::strcmp(arg, "medium") == 0)
+    {
+        info->name = "Medium";
+        info->limits = search::SearchLimits::Medium();
+        return true;
+    }
+    if (std::strcmp(arg, "strong") == 0)
+    {
+        info->name = "Strong";
+        info->limits = search::SearchLimits::Strong();
+        return true;
+    }
+    return false;
+}
+
 } // namespace
 
-int main()
+int main(int argc, char* argv[])
 {
-    std::unique_ptr<fatpup::Engine> weakEngine(fatpup::Engine::Create("minimax"));
-    if (!weakEngine)
+    if (argc != 3)
     {
-        std::fprintf(stderr, "failed to create fatpup minimax engine\n");
+        std::fprintf(stderr, "usage: %s <playerA> <playerB>\n  strengths: weak, medium, strong\n", argv[0]);
+        return 1;
+    }
+
+    PlayerInfo playerA{};
+    PlayerInfo playerB{};
+    if (!ParseStrength(argv[1], &playerA) || !ParseStrength(argv[2], &playerB))
+    {
+        std::fprintf(stderr, "invalid strength. use: weak, medium, strong\n");
         return 1;
     }
 
@@ -323,35 +334,36 @@ int main()
         return 1;
     }
     std::printf("loaded %zu book lines\n", book.size());
+    std::printf("match: %s vs %s (%d games)\n\n", playerA.name, playerB.name, Games);
 
     std::mt19937 rng(RngSeed);
 
     const std::string pgnDir = "tools/match-games";
-    // The caller must ensure this directory exists (the runner script does this).
 
-    int strongWins = 0;
-    int weakWins = 0;
+    int aWins = 0;
+    int bWins = 0;
     int draws = 0;
-    int strongAsWhiteWins = 0;
-    int strongAsBlackWins = 0;
-    int weakAsWhiteWins = 0;
-    int weakAsBlackWins = 0;
+    int aAsWhiteWins = 0;
+    int aAsBlackWins = 0;
+    int bAsWhiteWins = 0;
+    int bAsBlackWins = 0;
 
     for (int game = 1; game <= Games; ++game)
     {
-        const Player whitePlayer = (game % 2 == 1) ? Player::Strong : Player::Weak;
-        const GameResult gr = PlayGame(whitePlayer, weakEngine.get(), book, &rng);
+        const Player whitePlayer = (game % 2 == 1) ? Player::A : Player::B;
+        const GameResult gr = PlayGame(whitePlayer, playerA, playerB, book, &rng);
 
+        const char* whiteName = (whitePlayer == Player::A) ? playerA.name : playerB.name;
         const std::string resultStr = ResultToken(gr.outcome, whitePlayer);
-        if (gr.outcome.kind == GameOutcome::Kind::StrongWin)
+        if (gr.outcome.kind == GameOutcome::Kind::AWin)
         {
-            ++strongWins;
-            if (whitePlayer == Player::Strong) ++strongAsWhiteWins; else ++strongAsBlackWins;
+            ++aWins;
+            if (whitePlayer == Player::A) ++aAsWhiteWins; else ++aAsBlackWins;
         }
-        else if (gr.outcome.kind == GameOutcome::Kind::WeakWin)
+        else if (gr.outcome.kind == GameOutcome::Kind::BWin)
         {
-            ++weakWins;
-            if (whitePlayer == Player::Weak) ++weakAsWhiteWins; else ++weakAsBlackWins;
+            ++bWins;
+            if (whitePlayer == Player::B) ++bAsWhiteWins; else ++bAsBlackWins;
         }
         else
         {
@@ -363,7 +375,7 @@ int main()
         FILE* f = std::fopen(fname, "w");
         if (f)
         {
-            const std::string pgn = BuildPgn(game, whitePlayer, gr);
+            const std::string pgn = BuildPgn(game, whitePlayer, playerA, playerB, gr);
             std::fwrite(pgn.data(), 1, pgn.size(), f);
             std::fclose(f);
         }
@@ -373,16 +385,16 @@ int main()
         }
 
         std::printf("game %3d: white=%-6s  result %-7s  plies=%3d  (%s)\n",
-                    game, PlayerName(whitePlayer), resultStr.c_str(), gr.outcome.plies, gr.outcome.reason);
+                    game, whiteName, resultStr.c_str(), gr.outcome.plies, gr.outcome.reason);
         std::fflush(stdout);
     }
 
     std::printf("\n=== Match summary (%d games) ===\n", Games);
-    std::printf("Strong: %d wins (%d as white, %d as black)\n", strongWins, strongAsWhiteWins, strongAsBlackWins);
-    std::printf("Weak:   %d wins (%d as white, %d as black)\n", weakWins, weakAsWhiteWins, weakAsBlackWins);
+    std::printf("%s: %d wins (%d as white, %d as black)\n", playerA.name, aWins, aAsWhiteWins, aAsBlackWins);
+    std::printf("%s: %d wins (%d as white, %d as black)\n", playerB.name, bWins, bAsWhiteWins, bAsBlackWins);
     std::printf("Draws:  %d\n", draws);
-    const double strongScore = strongWins + 0.5 * draws;
-    const double weakScore = weakWins + 0.5 * draws;
-    std::printf("Score:  Strong %.1f - %.1f Weak\n", strongScore, weakScore);
+    const double aScore = aWins + 0.5 * draws;
+    const double bScore = bWins + 0.5 * draws;
+    std::printf("Score:  %s %.1f - %.1f %s\n", playerA.name, aScore, bScore, playerB.name);
     return 0;
 }
